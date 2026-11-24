@@ -112,7 +112,7 @@ Se quiser ter o controle total dos preços de referência:
    pra fixar a taxa USD→BRL.
 
 A planilha sai com cabeçalho colorido, linhas verde claro para deals
-aprovados (margem ≥ 25%, preço ≥ R$50) e rosa para reprovados.
+aprovados (margem ≥ 30% sobre a venda, preço ≥ R$50) e rosa para reprovados.
 
 ## 5. Problemas comuns
 

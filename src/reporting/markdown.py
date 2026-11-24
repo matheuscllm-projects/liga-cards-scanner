@@ -177,6 +177,14 @@ def build_markdown(items: list["Comparison"], rate: float) -> str:
         f"(margem sobre a venda ≥ {MIN_MARGIN_PERCENT:.0f}% e piso R${MIN_PRICE_BRL:.0f} — "
         f"piso vale SÓ para cartas; câmbio USD→BRL {rate:.4f})"
     )
+    d = getattr(items, "discards", None) or {}
+    if any(d.values()):
+        lines.append("")
+        lines.append(
+            f"> Ofertas sem linha: sem referência válida: "
+            f"{d.get('sem_referencia_valida', 0)} · sem preço Liga válido: "
+            f"{d.get('sem_preco_liga', 0)} · sem match: {d.get('sem_match', 0)}"
+        )
     lines.append("")
 
     if not items:

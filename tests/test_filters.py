@@ -89,3 +89,22 @@ class TestFilters:
         rejected = [r for r in results if r.status == "rejected"]
         assert len(approved) == 1
         assert len(rejected) == 3
+
+
+class TestDiscardCounters:
+    def test_zero_reference_is_counted_not_silent(self):
+        from src.reporting.markdown import build_markdown
+        o1, r1 = _make_pair(price_liga=100.0, price_usd=0.0, name="Zero")
+        o2, r2 = _make_pair(price_liga=0.0, price_usd=20.0, name="SemPreco")
+        o3, r3 = _make_pair(price_liga=100.0, price_usd=30.0, name="Ok")
+        o4, _ = _make_pair(price_liga=100.0, price_usd=30.0, name="SemMatch")
+        offers = [o1, o2, o3, o4]
+        result = match_cards(offers, [r1, r2, r3], exchange_rate=5.0)
+        d = result.discards
+        assert d["sem_referencia_valida"] == 1
+        assert d["sem_preco_liga"] == 1
+        assert d["sem_match"] == 1
+        assert len(result) + sum(d.values()) == len(offers)
+        md = build_markdown(result, 5.0)
+        assert "sem referência válida: 1" in md
+        assert "sem preço Liga válido: 1" in md

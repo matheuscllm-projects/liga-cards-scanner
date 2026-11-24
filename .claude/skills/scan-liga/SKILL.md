@@ -55,7 +55,7 @@ python src/main.py
 - Formato (padrão MYP, 3 buckets — todos com `[oferta](url) · [TCG](url)`
   em TODA linha):
   - 🟢 **Aprovados (match exato)** —
-    `| # | Margem % | Liga R$ | TCG US$ | Dif | Carta | Set | Raridade | Cond | Qtd | Links |`
+    `| # | Margem venda % | ROI aquisição % | Liga R$ | TCG US$ | Dif | Carta | Set | Raridade | Cond | Qtd | Links |`
   - ⚠️ **Aprovados com match fuzzy (validar manualmente)** — mesmas colunas
     + `Match` (score)
   - ❌ **Reprovados** (margem < mínima ou preço < piso) — mesmas colunas +
@@ -67,7 +67,7 @@ python src/main.py
 - **Threshold `30` INTEIRO** (30 = 30%) — convenção MYP/Liga/eBay, OPOSTA à
   do CardTrader/COMC/Selados (que usam fração `0.30`). Não confundir.
 - **Só Near Mint** — condição por match EXATO `== "NM"`, nunca substring.
-- **Margem BRUTA** — `(TCG_BRL − Liga_BRL) / Liga_BRL`, sem nenhuma taxa
+- **Margem BRUTA sobre a VENDA** — `(TCG_BRL − Liga_BRL) / TCG_BRL` (ROI = `/ Liga_BRL`, só informativo), sem nenhuma taxa
   embutida; frete/câmbio/IOF o operador calcula por fora.
 - **Nunca inventar preço** — fonte falhou → linha pulada/rotulada, jamais
   fabricar número.

@@ -18,7 +18,8 @@ HUMAN_LABELS = {
     "price_liga_brl": "Liga R$",
     "price_tcg_usd": "TCG USD",
     "price_tcg_brl": "TCG R$",
-    "margin_percent": "Margem %",
+    "margin_percent": "Margem venda %",
+    "roi_percent": "ROI aquisição %",
     "exchange_rate": "Cambio",
     "liga_url": "Link Liga",
     "tcg_url": "Link TCG",
@@ -29,7 +30,7 @@ HUMAN_LABELS = {
 
 CURRENCY_BRL_COLS = {"price_liga_brl", "price_tcg_brl"}
 CURRENCY_USD_COLS = {"price_tcg_usd"}
-PERCENT_COLS = {"margin_percent"}
+PERCENT_COLS = {"margin_percent", "roi_percent"}
 URL_COLS = {"liga_url", "tcg_url"}
 
 

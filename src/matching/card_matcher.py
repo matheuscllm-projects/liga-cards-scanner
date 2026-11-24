@@ -29,6 +29,7 @@ from src.pricing.margin import (
     MIN_MARGIN_PERCENT,
     MIN_PRICE_BRL,
     calculate_margin,
+    calculate_roi,
     is_approved,
 )
 
@@ -57,6 +58,7 @@ class Comparison:
     status: str
     match_score: float = 1.0
     card_number: str = ""  # numero da carta no set (ex. "156"); p/ a coluna Carta
+    roi_percent: float | None = None  # (ref-compra)/compra; so informativo
 
 
 def _normalized_key(card_name: str, set_name: str) -> tuple[str, str]:
@@ -177,6 +179,10 @@ def match_cards(
 
         price_tcg_brl = convert_usd_to_brl(ref.price_usd, exchange_rate)
         margin = calculate_margin(offer.price_brl, price_tcg_brl)
+        if margin is None:  # ref <= 0: sem preco de referencia utilizavel
+            logger.warning("Oferta %r ignorada: referencia TCG nao positiva.",
+                           offer.card_name)
+            continue
         approved = is_approved(offer.price_brl, margin, min_price, min_margin)
         comparisons.append(
             Comparison(
@@ -186,6 +192,7 @@ def match_cards(
                 price_tcg_usd=ref.price_usd,
                 price_tcg_brl=price_tcg_brl,
                 margin_percent=round(margin, 2),
+                roi_percent=round(calculate_roi(offer.price_brl, price_tcg_brl), 2),
                 exchange_rate=exchange_rate,
                 liga_url=offer.url,
                 tcg_url=ref.url,

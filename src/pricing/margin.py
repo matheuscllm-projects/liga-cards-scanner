@@ -5,16 +5,23 @@ MIN_MARGIN_PERCENT = 30.0
 MIN_PRICE_BRL = 50.0
 
 
-def calculate_margin(price_liga_brl: float, price_tcg_brl: float) -> float:
-    """Margem BRUTA (%) = ((TCG_BRL - Liga_BRL) / Liga_BRL) * 100.
+def calculate_margin(price_liga_brl: float, price_tcg_brl: float) -> float | None:
+    """Margem BRUTA sobre a VENDA (%) = (ref - compra) / ref * 100.
 
-    Bruta = so a diferenca de preco entre o card na Liga e a referencia
-    TCGplayer. NAO embute nenhuma taxa (frete, cartao, IOF, etc.); essas
-    o operador calcula por fora, manualmente.
+    compra = preco Liga; ref = TCGplayer em BRL. Sem taxas (frete, cartao,
+    IOF: o operador calcula por fora). compra ou ref <= 0 -> None.
     """
-    if price_liga_brl <= 0:
-        raise ValueError("Preço da Liga Pokémon precisa ser positivo.")
-    return ((price_tcg_brl - price_liga_brl) / price_liga_brl) * 100
+    if price_liga_brl <= 0 or price_tcg_brl <= 0:
+        return None
+    return (price_tcg_brl - price_liga_brl) / price_tcg_brl * 100
+
+
+def calculate_roi(price_liga_brl: float, price_tcg_brl: float) -> float | None:
+    """ROI de aquisicao (%) = (ref - compra) / compra * 100. So informativo:
+    nunca filtra, classifica nem ordena. compra ou ref <= 0 -> None."""
+    if price_liga_brl <= 0 or price_tcg_brl <= 0:
+        return None
+    return (price_tcg_brl - price_liga_brl) / price_liga_brl * 100
 
 
 def is_approved(

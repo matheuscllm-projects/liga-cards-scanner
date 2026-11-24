@@ -16,7 +16,7 @@ Formato canonico da frota (2026-07-02): espelho do bucket limpo do
 
 Colunas (identicas ao MYP, adaptadas a Liga):
 
-    | # | Margem % | Liga R$ | TCG US$ | Dif | Carta | Set | Raridade |
+    | # | Margem venda % | ROI aquisição % | Liga R$ | TCG US$ | Dif | Carta | Set | Raridade |
     | Cond | Qtd | Links |
 
 - **Carta**: nome + numero SEM `#` (ex. ``Umbreon ex 161``), estilo MYP.
@@ -44,10 +44,10 @@ if TYPE_CHECKING:  # evita import circular em runtime
 SUSPECT_MATCH_SCORE = 1.0
 
 _HEADER = (
-    "| # | Margem % | Liga R$ | TCG US$ | Dif | Carta | Set | "
+    "| # | Margem venda % | ROI aquisição % | Liga R$ | TCG US$ | Dif | Carta | Set | "
     "Raridade | Cond | Qtd | Links |"
 )
-_SEP = "|---|---:|---:|---:|---:|---|---|---|---|---:|---|"
+_SEP = "|---|---:|---:|---:|---:|---:|---|---|---|---|---:|---|"
 _HEADER_MATCH = _HEADER + " Match |"
 _SEP_MATCH = _SEP + "---:|"
 
@@ -135,6 +135,7 @@ def _row(idx: int, c: "Comparison", *, bold_margin: bool,
     cells = [
         str(idx),
         margin,
+        fmt_pct(c.roi_percent),
         fmt_brl(c.price_liga_brl),
         reference_price(fmt_usd(c.price_tcg_usd), c.tcg_url),
         fmt_brl(c.price_tcg_brl - c.price_liga_brl),
@@ -173,9 +174,17 @@ def build_markdown(items: list["Comparison"], rate: float) -> str:
     lines.append(
         f"**Liga Pokémon — {len(items)} ofertas comparadas, "
         f"{len(approved)} aprovadas** "
-        f"(margem bruta ≥ {MIN_MARGIN_PERCENT:.0f}% e piso R${MIN_PRICE_BRL:.0f} — "
+        f"(margem sobre a venda ≥ {MIN_MARGIN_PERCENT:.0f}% e piso R${MIN_PRICE_BRL:.0f} — "
         f"piso vale SÓ para cartas; câmbio USD→BRL {rate:.4f})"
     )
+    d = getattr(items, "discards", None) or {}
+    if any(d.values()):
+        lines.append("")
+        lines.append(
+            f"> Ofertas sem linha: sem referência válida: "
+            f"{d.get('sem_referencia_valida', 0)} · sem preço Liga válido: "
+            f"{d.get('sem_preco_liga', 0)} · sem match: {d.get('sem_match', 0)}"
+        )
     lines.append("")
 
     if not items:

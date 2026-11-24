@@ -29,6 +29,7 @@ from src.pricing.margin import (
     MIN_MARGIN_PERCENT,
     MIN_PRICE_BRL,
     calculate_margin,
+    calculate_roi,
     is_approved,
 )
 
@@ -41,6 +42,16 @@ SET_WEIGHT = 0.3
 # a ref e de OUTRA versao do mesmo nome (regular vs SIR) — margem pode estar
 # inflada/deflacionada. < 1.0 manda a linha pro bucket "validar manualmente".
 CROSS_NUMBER_SCORE = 0.8
+
+
+class MatchResult(list):
+    """Lista de Comparison + `discards`: ofertas recebidas que NAO viraram
+    linha, por motivo. len(self) + sum(discards.values()) == ofertas recebidas."""
+
+    def __init__(self, *a):
+        super().__init__(*a)
+        self.discards = {"sem_preco_liga": 0, "sem_match": 0,
+                         "sem_referencia_valida": 0}
 
 
 @dataclass
@@ -57,6 +68,7 @@ class Comparison:
     status: str
     match_score: float = 1.0
     card_number: str = ""  # numero da carta no set (ex. "156"); p/ a coluna Carta
+    roi_percent: float | None = None  # (ref-compra)/compra; so informativo
 
 
 def _normalized_key(card_name: str, set_name: str) -> tuple[str, str]:
@@ -125,7 +137,7 @@ def match_cards(
     min_price: float = MIN_PRICE_BRL,
     min_margin: float = MIN_MARGIN_PERCENT,
     fuzzy_threshold: float = FUZZY_MATCH_THRESHOLD,
-) -> list[Comparison]:
+) -> MatchResult:
     index: dict[tuple[str, str], TCGReference] = {
         _normalized_key(ref.card_name, ref.set_name): ref
         for ref in tcg_references
@@ -140,7 +152,7 @@ def match_cards(
         if getattr(ref, "card_number", "")
     }
 
-    comparisons: list[Comparison] = []
+    comparisons = MatchResult()
     for offer in liga_offers:
         if offer.price_brl <= 0:
             # Margem exige preco Liga positivo (ver calculate_margin). Pula
@@ -150,6 +162,7 @@ def match_cards(
                 offer.card_name,
                 offer.price_brl,
             )
+            comparisons.discards["sem_preco_liga"] += 1
             continue
         offer_key = _normalized_key(offer.card_name, offer.set_name)
         score = 1.0
@@ -173,10 +186,16 @@ def match_cards(
         if ref is None:
             ref, score = _find_best_fuzzy(offer_key, index, fuzzy_threshold)
             if ref is None:
+                comparisons.discards["sem_match"] += 1
                 continue
 
         price_tcg_brl = convert_usd_to_brl(ref.price_usd, exchange_rate)
         margin = calculate_margin(offer.price_brl, price_tcg_brl)
+        if margin is None:  # ref <= 0: sem preco de referencia utilizavel
+            logger.warning("Oferta %r ignorada: referencia TCG nao positiva.",
+                           offer.card_name)
+            comparisons.discards["sem_referencia_valida"] += 1
+            continue
         approved = is_approved(offer.price_brl, margin, min_price, min_margin)
         comparisons.append(
             Comparison(
@@ -186,6 +205,7 @@ def match_cards(
                 price_tcg_usd=ref.price_usd,
                 price_tcg_brl=price_tcg_brl,
                 margin_percent=round(margin, 2),
+                roi_percent=round(calculate_roi(offer.price_brl, price_tcg_brl), 2),
                 exchange_rate=exchange_rate,
                 liga_url=offer.url,
                 tcg_url=ref.url,
@@ -196,5 +216,8 @@ def match_cards(
             )
         )
 
-    comparisons.sort(key=lambda c: c.margin_percent, reverse=True)
+    # ordena pela margem bruta (nao a arredondada)
+    comparisons.sort(
+        key=lambda c: calculate_margin(c.price_liga_brl, c.price_tcg_brl),
+        reverse=True)
     return comparisons

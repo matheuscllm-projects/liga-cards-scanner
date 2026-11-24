@@ -41,13 +41,13 @@ fica aqui — vai em `## Decisões`.
 
 Invariantes que valem para TODOS os scanners:
 
-- **Margem BRUTA, mínimo 30%** — só `(revenda − compra)/compra`, sem nenhuma taxa embutida (frete, cartão, IOF — o operador calcula por fora).
+- **Margem BRUTA SOBRE A VENDA, mínimo 30%** — `(ref − compra)/ref`, sem nenhuma taxa embutida (frete, cartão, IOF — o operador calcula por fora).
 - **Piso de relevância R$50 (~US$10) — SÓ para cartas avulsas (singles).** Produtos SELADOS não têm piso (decisão do operador, 2026-06-27); lá o único critério é a margem ≥30%.
 - **Só Near Mint** — condição por match EXATO `== "NM"`, nunca substring (já vazou SP).
 - **Nunca inventar preço** — fonte falhou → marca fallback/erro e segue; jamais fabrica número.
 - **Nunca recomendar compra** — o scanner reporta margem, flags e fontes; a decisão de capital é do operador.
 - **Entrega = tabela markdown no chat** (nunca XLSX/CSV por padrão), gerada pela ferramenta do repo — nunca montada à mão —, mostrando TODAS as linhas (aprovadas + rejeitadas). Coluna `Carta` = nome + número; coluna `Links` combinada = `[oferta](url) · [TCG/referência](url)`.
-- ⚠️ **Convenção de threshold:** percentual inteiro (`30`) = MYP, Liga, eBay; fração (`0.30`) = CardTrader, COMC, Selados.
+- ⚠️ **Convenção de threshold:** percentual inteiro (`30`) = MYP, Liga, eBay; fração (`0.30`) = CardTrader, Selados (COMC também é inteiro).
 
 Erros recorrentes (3 famílias — detalhe no manual):
 
@@ -64,11 +64,12 @@ TCGplayer (USD, pokemontcg.io), converte tudo para BRL e lista os cards
 aprovados ordenados por maior margem:
 
 ```
-Margem% = ((TCG_BRL − Liga_BRL) / Liga_BRL) × 100   (margem BRUTA, sem taxas)
+Margem venda % = ((TCG_BRL − Liga_BRL) / TCG_BRL) × 100   (BRUTA, sobre a venda, sem taxas)
+ROI aquisição % = ((TCG_BRL − Liga_BRL) / Liga_BRL) × 100   (só informativo: nunca filtra, classifica nem ordena)
 Aprovado  ⇔  preço_liga ≥ R$50  E  margem ≥ 30%
 ```
 
-> **Margem é BRUTA**: só a diferença de preço entre os dois produtos. O scanner
+> **Margem é BRUTA e sobre a VENDA** (decisão do dono, 2026-11-24; corte 30 inalterado, agora sobre a venda; compra ou ref ≤ 0 → `None`): só a diferença de preço entre os dois produtos. O scanner
 > NÃO embute frete, taxa de cartão, IOF nem qualquer outra taxa — o operador
 > calcula isso por fora, manualmente. O piso de R$50 é filtro de relevância
 > (não é taxa). Regra cross-scanner do operador (2026-06-06): 30% bruta, todos
@@ -143,7 +144,7 @@ Desde 2026-07-02 a entrega é o **formato padrão da frota** (espelho do
 `myp_summary.py` do repo `myp-arbitrage-scanner`), em **3 buckets**:
 
 1. **🟢 Aprovados (match exato)** — margem em **negrito**:
-   `| # | Margem % | Liga R$ | TCG US$ | Dif | Carta | Set | Raridade | Cond | Qtd | Links |`
+   `| # | Margem venda % | ROI aquisição % | Liga R$ | TCG US$ | Dif | Carta | Set | Raridade | Cond | Qtd | Links |`
 2. **⚠️ Aprovados com match fuzzy (validar manualmente)** — mesmas colunas + `Match` (score); o caveat fica no título da seção (padrão MYP), não numa coluna Nota.
 3. **❌ Reprovados (margem < 30% ou preço < R$50)** — mesmas colunas + `Match`; garante o invariante da frota de mostrar **TODAS** as linhas comparadas (não amostra curada).
 
@@ -151,7 +152,7 @@ Desde 2026-07-02 a entrega é o **formato padrão da frota** (espelho do
 - **Dif** = lucro bruto em R$ (`TCG R$ − Liga R$`).
 - **Raridade** / **Qtd** = `—` (a Liga não expõe raridade nem estoque por oferta); **Cond** = `NM` (invariante NM-only).
 - **Links** = `[oferta](url) · [TCG](url)` — **clicáveis e verificáveis**, SEMPRE os dois lados quando existirem (a oferta na Liga e a referência de preço no TCGplayer). Nunca inventar URL.
-- Formatação: `R$800,00` / `US$300.00` / `95.0%`; `—` para valor ausente. ⚠️ **Gotcha do `fmt_pct`:** a margem da Liga já é percentual — o `fmt_pct` local NÃO multiplica por 100 (diferente do MYP, onde a margem é fração).
+- Formatação: `R$800,00` / `US$300.00` / `95.0%`; `—` para valor ausente. ⚠️ **Gotcha do `fmt_pct`:** a margem e o ROI da Liga já são percentuais — o `fmt_pct` local NÃO multiplica por 100 (diferente do MYP, onde a margem é fração).
 - Colunas `Status`/`Nota` NÃO existem (saíram em 2026-07-02 — o bucket codifica o status).
 - O procedimento completo de scan + entrega está fixado no skill **`.claude/skills/scan-liga/SKILL.md`**.
 
@@ -332,7 +333,7 @@ src/matching/
   normalization.py       lowercase, remove acento, aliases de set (obf -> obsidian flames...), VMAX/VSTAR/VUNION
 src/pricing/
   currency.py            get_exchange_rate() (fixo / auto via AwesomeAPI); convert_usd_to_brl()
-  margin.py              calculate_margin(); is_approved().  MIN_MARGIN=30% (bruta, sem taxa), MIN_PRICE=R$50
+  margin.py              calculate_margin() (sobre a venda); calculate_roi() (informativo); is_approved().  MIN_MARGIN=30% (bruta sobre a venda, sem taxa), MIN_PRICE=R$50
 src/reporting/
   markdown.py            build_markdown() — a ENTREGA canonica (tabela markdown formato MYP, 3 buckets, links clicaveis). main.py imprime isto no fim.
   xlsx.py                write_xlsx() — header colorido, formato moeda/%, tinta por status, hyperlinks, freeze panes, autofilter (subproduto local)
@@ -516,7 +517,7 @@ Martelos batidos pela operadora (destino do balde 2 do `/reflect`). Uma linha
 por decisão: **decisão + data + motivo**; quando a regra tem seção própria, o
 item aponta pra ela (fonte única, sem cópia).
 
-- **Margem BRUTA, mínimo 30%, em todos os scanners de TCG** (2026-06-06) —
+- **Margem BRUTA sobre a VENDA, mínimo 30%, em todos os scanners de TCG** (2026-06-06; base = venda desde 2026-11-24) —
   taxas o operador calcula por fora. → § Propósito do repositório.
 - **Entrega = tabela markdown no chat, nunca arquivo por padrão** (2026-06-06)
   — arquivo só sob pedido explícito. → § 📤 Entrega de resultados.

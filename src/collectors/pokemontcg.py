@@ -248,7 +248,8 @@ def _pick_best(
             if not entry:
                 continue
             value = entry.get(price_field)
-            if not isinstance(value, (int, float)):
+            # 0 nao e cotacao: trata como ausencia de referencia.
+            if not isinstance(value, (int, float)) or value <= 0:
                 continue
             if value < best_price:
                 best_price = float(value)

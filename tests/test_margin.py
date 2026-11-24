@@ -5,33 +5,35 @@ from src.pricing.margin import (
     MIN_MARGIN_PERCENT,
     MIN_PRICE_BRL,
     calculate_margin,
+    calculate_roi,
     is_approved,
 )
 
 
 class TestCalculateMargin:
+    """Margem sobre a VENDA = (ref - compra)/ref; ROI = (ref - compra)/compra."""
+
+    # (compra, ref, margem_venda %, roi %, passa no corte de 30)
+    GOLDEN = [
+        (75.0, 100.0, 25.0, 33.33, False),
+        (70.0, 100.0, 30.0, 42.86, True),   # fronteira
+        (100.0, 80.0, -25.0, -20.0, False),
+    ]
+
+    @pytest.mark.parametrize("compra,ref,margem,roi,passa", GOLDEN)
+    def test_golden_cases(self, compra, ref, margem, roi, passa):
+        m = calculate_margin(compra, ref)
+        assert m == pytest.approx(margem, abs=0.005)
+        assert calculate_roi(compra, ref) == pytest.approx(roi, abs=0.005)
+        assert (m >= MIN_MARGIN_PERCENT) is passa
+
     def test_zero_margin_when_prices_equal(self):
         assert calculate_margin(100.0, 100.0) == 0.0
 
-    def test_positive_margin(self):
-        # ((150 - 100) / 100) * 100 = 50
-        assert calculate_margin(100.0, 150.0) == 50.0
-
-    def test_negative_margin_when_tcg_lower(self):
-        # ((80 - 100) / 100) * 100 = -20
-        assert calculate_margin(100.0, 80.0) == -20.0
-
-    def test_example_from_readme(self):
-        # README: 80 -> 110 -> 37.5%
-        assert calculate_margin(80.0, 110.0) == pytest.approx(37.5)
-
-    def test_raises_on_zero_liga_price(self):
-        with pytest.raises(ValueError):
-            calculate_margin(0.0, 100.0)
-
-    def test_raises_on_negative_liga_price(self):
-        with pytest.raises(ValueError):
-            calculate_margin(-10.0, 100.0)
+    @pytest.mark.parametrize("compra,ref", [(0, 100), (-10, 100), (100, 0), (100, -5)])
+    def test_none_when_non_positive(self, compra, ref):
+        assert calculate_margin(compra, ref) is None
+        assert calculate_roi(compra, ref) is None
 
 
 class TestIsApproved:

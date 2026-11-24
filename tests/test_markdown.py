@@ -75,7 +75,7 @@ class TestBuildMarkdown:
     def test_header_columns_are_myp_format(self):
         md = build_markdown([_comp()], 5.20)
         assert (
-            "| # | Margem % | Liga R$ | TCG US$ | Dif | Carta | Set | "
+            "| # | Margem venda % | ROI aquisição % | Liga R$ | TCG US$ | Dif | Carta | Set | "
             "Raridade | Cond | Qtd | Links |"
         ) in md
 
